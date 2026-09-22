@@ -253,12 +253,6 @@ def _sentence_starts(text: str) -> list[int]:
     return sorted(starts)
 
 
-def _bank_office(text: str, starts: list[int], span: Span) -> bool:
-    """Контекст «отделение/офис/филиал банка» в том же предложении перед адресом."""
-    sent_start = starts[bisect.bisect_right(starts, span.start) - 1]
-    return ORG_ADDR_CTX.search(text, sent_start, span.start) is not None
-
-
 def detect_addresses(text: str) -> list[Span]:
     """Один цикл по _ADDR_RULES: возвращает спаны адресов (перекрытия не разрешает)."""
     spans: list[Span] = []
@@ -273,7 +267,13 @@ def detect_addresses(text: str) -> list[Span]:
     if not spans:
         return spans
     starts = _sentence_starts(text)
-    return [s for s in spans if not _bank_office(text, starts, s)]
+    ctx = [m.start() for m in ORG_ADDR_CTX.finditer(text)]
+    out: list[Span] = []
+    for s in spans:
+        sent_start = starts[bisect.bisect_right(starts, s.start) - 1]
+        if bisect.bisect_left(ctx, sent_start) == bisect.bisect_left(ctx, s.start):
+            out.append(s)
+    return out
 
 
 def detect_names_and_addresses(text: str) -> list[Span]:
