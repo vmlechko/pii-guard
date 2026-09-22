@@ -1,0 +1,4 @@
+# Опциональная зависимость: Natasha для NER максимальной полноты (NER_ENGINE=natasha).
+# Не нужна для быстрого regex-движка, который используется по умолчанию. Установка:
+#   pip install -r requirements-optional.txt
+natasha==1.6.0

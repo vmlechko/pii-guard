@@ -1,0 +1,24 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped
+
+  app:
+    build: .
+    environment:
+      # Общий стор соответствий payload_id → оригинал (нужен при нескольких воркерах).
+      REDIS_URL: redis://redis:6379/0
+      PII_CONFIG: /app/config/systems.yaml
+      STORE_TTL: "3600"
+      # Демо-прокси в реальную LLM (не обязателен для /process): значения берутся из .env,
+      # см. .env.example. Адреса и ключи в репозитории не хранятся.
+      ALFAGEN_API_KEY: ${ALFAGEN_API_KEY:-}
+      ALFAGEN_BASE_URL: ${ALFAGEN_BASE_URL:-}
+      ALFAGEN_MODEL: ${ALFAGEN_MODEL:-}
+    depends_on:
+      - redis
+    ports:
+      - "80:8000"      # основной: http://<IP> без порта (для формы сдачи)
+      - "8000:8000"    # запасной
+    restart: unless-stopped

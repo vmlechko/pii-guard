@@ -1,0 +1,17 @@
+# Виртуальные окружения и зависимости
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+
+# Секреты и локальные настройки
+.env
+
+# Служебное
+.pytest_cache/
+.mypy_cache/
+.coverage
+.idea/
+.vscode/
+*.log
