@@ -173,7 +173,7 @@ RULES: tuple[Rule, ...] = (
         "passport", 88, groups=(1, 2),
     ),
     Rule(
-        re.compile(r"(?<!\d)(\d{2}\s?\d{2})(?:\s*(?:№|номер)\s*)(\d{6})(?!\d)"),
+        re.compile(r"(?<!\d)(\d{2}\s?\d{2})(?:\s+|\s*(?:№|номер)\s*)(\d{6})(?!\d)"),
         "passport", 70, groups=(1, 2),
     ),
     Rule(
