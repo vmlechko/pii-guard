@@ -17,6 +17,8 @@ import uuid
 
 import httpx
 
+PROCESS_PATH = "/process"
+
 SAMPLES = [
     "Клиент Иванов Иван Иванович, паспорт 4509 123456, тел +7 916 123-45-67",
     "карта 4276 3800 1234 5678, CVV 123, пин-код 4321, email a.ivanov@example.com",
@@ -33,11 +35,11 @@ async def worker(client: httpx.AsyncClient, stop_at: float, lat: list, errs: lis
         text = SAMPLES[int(time.perf_counter() * 1000) % len(SAMPLES)]
         try:
             t0 = time.perf_counter()
-            r1 = await client.post("/process", json={"payload": text, "payload_id": pid})
+            r1 = await client.post(PROCESS_PATH, json={"payload": text, "payload_id": pid})
             lat.append(time.perf_counter() - t0)
             mask = r1.json()["result"]
             t0 = time.perf_counter()
-            r2 = await client.post("/process", json={"payload": mask, "payload_id": pid})
+            r2 = await client.post(PROCESS_PATH, json={"payload": mask, "payload_id": pid})
             lat.append(time.perf_counter() - t0)
             if r1.status_code != 200 or r2.status_code != 200 or r2.json()["result"] != text:
                 errs.append(1)
@@ -56,7 +58,7 @@ async def main() -> None:
     errs: list[int] = []
     limits = httpx.Limits(max_connections=args.concurrency, max_keepalive_connections=args.concurrency)
     async with httpx.AsyncClient(base_url=args.url, timeout=10, limits=limits) as client:
-        await client.post("/process", json={"payload": "warmup", "payload_id": "w"})  # прогрев
+        await client.post(PROCESS_PATH, json={"payload": "warmup", "payload_id": "w"})  # прогрев
         stop_at = time.perf_counter() + args.duration
         t0 = time.perf_counter()
         await asyncio.gather(*[worker(client, stop_at, lat, errs) for _ in range(args.concurrency)])
