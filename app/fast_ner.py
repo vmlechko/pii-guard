@@ -216,7 +216,10 @@ def _city_forms(name: str) -> set[str]:
 
 
 _BARE_CITIES = frozenset(f for c in _CITIES for f in _city_forms(c)) | {"россия"}
-_ADDR_BARE = re.compile(r"\b(" + "|".join(sorted(_BARE_CITIES)) + r")\b", re.IGNORECASE)
+# Заглавное слово (или два) — кандидат на голый город из словаря.
+_CAP_CITY = re.compile(
+    r"[А-ЯЁ][а-яё]+(?:-[А-ЯЁа-яё]+)*(?:\s+[А-ЯЁ][а-яё]+(?:-[А-ЯЁа-яё]+)*)?"
+)
 
 # Граница предложения: перенос строки или .!? после слова ≥4 букв с заглавной дальше.
 _SENT_END = re.compile(r"[А-ЯЁа-яёA-Za-z]{4,}[.!?]\s+(?=[А-ЯЁA-Z])")
@@ -241,8 +244,21 @@ _ADDR_RULES: tuple[_AddrRule, ...] = (
     _AddrRule(_ADDR_HOUSE, (1,)),
     _AddrRule(_ADDR_HOUSE_AFTER, (1,)),
     _AddrRule(_ADDR_FLAT, (1,)),
-    _AddrRule(_ADDR_BARE, (1,), bare=True),
 )
+
+
+def _bare_city_spans(text: str) -> list[Span]:
+    """Голые города по словарю: заглавное слово (или два) из _BARE_CITIES."""
+    spans: list[Span] = []
+    for m in _CAP_CITY.finditer(text):
+        s = m.group(0)
+        if s.lower() in _BARE_CITIES:
+            spans.append(Span(m.start(), m.end(), "address", 0, {"bare": True}))
+        else:
+            first = s.split()[0]
+            if first.lower() in _BARE_CITIES:
+                spans.append(Span(m.start(), m.start() + len(first), "address", 0, {"bare": True}))
+    return spans
 
 
 def _sentence_starts(text: str) -> list[int]:
@@ -264,6 +280,7 @@ def detect_addresses(text: str) -> list[Span]:
                     continue
                 meta = {"bare": True} if rule.bare else {}
                 spans.append(Span(*m.span(g), "address", 0, meta))
+    spans += _bare_city_spans(text)
     if not spans:
         return spans
     starts = _sentence_starts(text)
