@@ -22,6 +22,14 @@ log = logging.getLogger(__name__)
 
 app = FastAPI(title="Модуль безопасности ПД")
 
+# Демо-прокси к LLM подключается опционально: отсутствие httpx не ломает сервис.
+try:
+    from app.llm_proxy import router as llm_router
+
+    app.include_router(llm_router)
+except ImportError:
+    log.warning("llm_proxy недоступен, POST /demo/llm отключён")
+
 # Конфигурация и стор загружаются один раз при старте приложения.
 _config: Config = load_config(os.environ.get("PII_CONFIG", "config/systems.yaml"))
 _store: Store = build_store(
