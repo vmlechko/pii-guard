@@ -282,17 +282,24 @@ def _sentence_starts(text: str) -> list[int]:
     return sorted(starts)
 
 
+def _addr_rule_spans(m: re.Match, rule: _AddrRule) -> list[Span]:
+    """Спаны одного матча правила адреса: по каждой группе."""
+    spans: list[Span] = []
+    for g in rule.groups:
+        value = m.group(g)
+        if value is None:
+            continue
+        meta = {"bare": True} if rule.bare else {}
+        spans.append(Span(*m.span(g), PII.ADDRESS.value, 0, meta))
+    return spans
+
+
 def detect_addresses(text: str) -> list[Span]:
     """Один цикл по _ADDR_RULES: возвращает спаны адресов (перекрытия не разрешает)."""
     spans: list[Span] = []
     for rule in _ADDR_RULES:
         for m in rule.regex.finditer(text):
-            for g in rule.groups:
-                value = m.group(g)
-                if value is None:
-                    continue
-                meta = {"bare": True} if rule.bare else {}
-                spans.append(Span(*m.span(g), PII.ADDRESS.value, 0, meta))
+            spans += _addr_rule_spans(m, rule)
     spans += _bare_city_spans(text)
     if not spans:
         return spans

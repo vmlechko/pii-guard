@@ -244,20 +244,27 @@ RULES: tuple[Rule, ...] = (
 )
 
 
+def _rule_spans(m: re.Match, rule: Rule) -> list[Span]:
+    """Спаны одного матча правила: по каждой группе с валидатором."""
+    spans: list[Span] = []
+    for g in rule.groups:
+        value = m.group(g)
+        if value is None:
+            continue
+        if rule.validator is not None and not rule.validator(value):
+            continue
+        start, end = m.span(g)
+        meta = {"bare": True} if rule.bare else {}
+        spans.append(Span(start, end, rule.pii_type, rule.priority, meta))
+    return spans
+
+
 def detect_structured(text: str) -> list[Span]:
     """Один цикл по RULES: возвращает сырые спаны (перекрытия не разрешает)."""
     spans: list[Span] = []
     for rule in RULES:
         for m in rule.regex.finditer(text):
-            for g in rule.groups:
-                value = m.group(g)
-                if value is None:
-                    continue
-                if rule.validator is not None and not rule.validator(value):
-                    continue
-                start, end = m.span(g)
-                meta = {"bare": True} if rule.bare else {}
-                spans.append(Span(start, end, rule.pii_type, rule.priority, meta))
+            spans += _rule_spans(m, rule)
     return spans
 
 
