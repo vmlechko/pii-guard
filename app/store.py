@@ -82,7 +82,7 @@ class RedisStore:
     """Хранилище в Redis: HSET o/m + EXPIRE, ключи с префиксом pii:."""
 
     def __init__(self, redis_url: str, ttl_seconds: int) -> None:
-        import redis  # импорт внутри класса, чтобы не тянуть зависимость на уровне модуля
+        import redis  # импорт внутри класса, чтобы не тянуть зависимость на уровне модуля  # noqa: PLC0415
 
         self._ttl = ttl_seconds
         self._client = redis.from_url(redis_url)

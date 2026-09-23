@@ -7,8 +7,8 @@ from __future__ import annotations
 
 import bisect
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from app.detectors import Span
 from app.lexicon import FAMOUS_SURNAMES, FIRST_NAMES, ORG_ADDR_CTX, STOP_TITLE_WORDS
@@ -75,7 +75,7 @@ def _single_ok(value: str) -> bool:
 
 def _imya_otch_ok(value: str) -> bool:
     """Первое слово пары «Имя Отчество» — имя из словаря."""
-    return value.split()[0].lower() in FIRST_NAMES
+    return value.split(maxsplit=1)[0].lower() in FIRST_NAMES
 
 
 # --- таблица правил ФИО (раздел 4 SPEC) ---------------------------------------
@@ -107,26 +107,38 @@ def _famous_in_window(text: str, start: int, end: int) -> bool:
     return _FAMOUS_RE.search(window) is not None
 
 
+def _pair_spans(text: str, m: re.Match, rule: _Rule) -> list[Span]:
+    """Спаны правила-пары: два слова через lookahead, валидатор по объединённому значению."""
+    if m.group(1) is None or m.group(2) is None:
+        return []
+    value = text[m.start(1):m.end(2)]
+    if rule.validator is not None and not rule.validator(value):
+        return []
+    return [Span(m.start(1), m.end(2), "fio", rule.priority)]
+
+
+def _group_spans(text: str, m: re.Match, rule: _Rule) -> list[Span]:
+    """Спаны правила-групп: по каждой группе с валидатором."""
+    spans: list[Span] = []
+    for g in rule.groups:
+        value = m.group(g)
+        if value is None:
+            continue
+        if rule.validator is not None and not rule.validator(value):
+            continue
+        spans.append(Span(*m.span(g), "fio", rule.priority))
+    return spans
+
+
 def detect_names(text: str) -> list[Span]:
     """Один цикл по _NAME_RULES: возвращает спаны ФИО (перекрытия не разрешает)."""
     spans: list[Span] = []
     for rule in _NAME_RULES:
         for m in rule.regex.finditer(text):
             if rule.pair:
-                if m.group(1) is None or m.group(2) is None:
-                    continue
-                value = text[m.start(1):m.end(2)]
-                if rule.validator is not None and not rule.validator(value):
-                    continue
-                spans.append(Span(m.start(1), m.end(2), "fio", rule.priority))
-                continue
-            for g in rule.groups:
-                value = m.group(g)
-                if value is None:
-                    continue
-                if rule.validator is not None and not rule.validator(value):
-                    continue
-                spans.append(Span(*m.span(g), "fio", rule.priority))
+                spans += _pair_spans(text, m, rule)
+            else:
+                spans += _group_spans(text, m, rule)
     return _clean_names(text, spans)
 
 

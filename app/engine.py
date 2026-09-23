@@ -32,6 +32,15 @@ def _select_ner() -> object:
     return importlib.import_module("app.fast_ner")
 
 
+def _bare_ok(span: Span, has_passport: bool, has_addr: bool, has_ctx: bool) -> bool:
+    """Подтверждает один bare-спан: dept_code — есть паспорт; address — другой адрес или контекст."""
+    if span.type == _BARE_DEPT:
+        return has_passport
+    if span.type == _BARE_ADDR:
+        return has_addr or has_ctx
+    return True
+
+
 def _confirm_bare(spans: list[Span], text: str) -> list[Span]:
     """Подтверждает bare-спаны: dept_code — есть паспорт; address — другой адрес или контекст."""
     types = {s.type for s in spans}
@@ -40,11 +49,8 @@ def _confirm_bare(spans: list[Span], text: str) -> list[Span]:
     has_ctx = ADDRESS_CONTEXT.search(text) is not None
     result: list[Span] = []
     for s in spans:
-        if s.meta.get("bare"):
-            if s.type == _BARE_DEPT and not has_passport:
-                continue
-            if s.type == _BARE_ADDR and not (has_addr or has_ctx):
-                continue
+        if s.meta.get("bare") and not _bare_ok(s, has_passport, has_addr, has_ctx):
+            continue
         result.append(s)
     return result
 

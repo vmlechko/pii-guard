@@ -10,7 +10,7 @@ services:
       # Общий стор соответствий payload_id → оригинал (нужен при нескольких воркерах).
       REDIS_URL: redis://redis:6379/0
       PII_CONFIG: /app/config/systems.yaml
-      STORE_TTL: "3600"
+      PII_TTL: "3600"
       # Демо-прокси в реальную LLM (не обязателен для /process): значения берутся из .env,
       # см. .env.example. Адреса и ключи в репозитории не хранятся.
       ALFAGEN_API_KEY: ${ALFAGEN_API_KEY:-}

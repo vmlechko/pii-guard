@@ -6,9 +6,9 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Callable
 
 # --- короткие именованные фрагменты регэкспов ---------------------------------
 
@@ -65,10 +65,10 @@ def inn_ok(value: str) -> bool:
     """Контрольная сумма ИНН (10 или 12 цифр)."""
     digits = re.sub(r"\D", "", value)
     if len(digits) == 10:
-        return sum(int(d) * w for d, w in zip(digits, _INN10)) % 11 % 10 == int(digits[9])
+        return sum(int(d) * w for d, w in zip(digits, _INN10, strict=False)) % 11 % 10 == int(digits[9])
     if len(digits) == 12:
-        c1 = sum(int(d) * w for d, w in zip(digits, _INN11)) % 11 % 10
-        c2 = sum(int(d) * w for d, w in zip(digits, _INN12)) % 11 % 10
+        c1 = sum(int(d) * w for d, w in zip(digits, _INN11, strict=False)) % 11 % 10
+        c2 = sum(int(d) * w for d, w in zip(digits, _INN12, strict=False)) % 11 % 10
         return c1 == int(digits[10]) and c2 == int(digits[11])
     return False
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Callable
+from collections.abc import Callable
 
 from app.detectors import Span
 
