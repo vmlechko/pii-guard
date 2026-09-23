@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from app.detectors import Span
 from app.lexicon import FAMOUS_SURNAMES, FIRST_NAMES, ORG_ADDR_CTX, STOP_TITLE_WORDS
+from app.pii_types import PII
 
 # --- короткие именованные фрагменты регэкспов ---------------------------------
 
@@ -114,7 +115,7 @@ def _pair_spans(text: str, m: re.Match, rule: _Rule) -> list[Span]:
     value = text[m.start(1):m.end(2)]
     if rule.validator is not None and not rule.validator(value):
         return []
-    return [Span(m.start(1), m.end(2), "fio", rule.priority)]
+    return [Span(m.start(1), m.end(2), PII.FIO.value, rule.priority)]
 
 
 def _group_spans(text: str, m: re.Match, rule: _Rule) -> list[Span]:
@@ -126,7 +127,7 @@ def _group_spans(text: str, m: re.Match, rule: _Rule) -> list[Span]:
             continue
         if rule.validator is not None and not rule.validator(value):
             continue
-        spans.append(Span(*m.span(g), "fio", rule.priority))
+        spans.append(Span(*m.span(g), PII.FIO.value, rule.priority))
     return spans
 
 
@@ -149,7 +150,7 @@ def _clean_names(text: str, spans: list[Span]) -> list[Span]:
         start = _strip_title(text, s.start, s.end)
         if start >= s.end or _famous_in_window(text, start, s.end):
             continue
-        result.append(Span(start, s.end, "fio", s.priority, s.meta))
+        result.append(Span(start, s.end, PII.FIO.value, s.priority, s.meta))
     return result
 
 
@@ -265,11 +266,11 @@ def _bare_city_spans(text: str) -> list[Span]:
     for m in _CAP_CITY.finditer(text):
         s = m.group(0)
         if s.lower() in _BARE_CITIES:
-            spans.append(Span(m.start(), m.end(), "address", 0, {"bare": True}))
+            spans.append(Span(m.start(), m.end(), PII.ADDRESS.value, 0, {"bare": True}))
         else:
             first = s.split()[0]
             if first.lower() in _BARE_CITIES:
-                spans.append(Span(m.start(), m.start() + len(first), "address", 0, {"bare": True}))
+                spans.append(Span(m.start(), m.start() + len(first), PII.ADDRESS.value, 0, {"bare": True}))
     return spans
 
 
@@ -291,7 +292,7 @@ def detect_addresses(text: str) -> list[Span]:
                 if value is None:
                     continue
                 meta = {"bare": True} if rule.bare else {}
-                spans.append(Span(*m.span(g), "address", 0, meta))
+                spans.append(Span(*m.span(g), PII.ADDRESS.value, 0, meta))
     spans += _bare_city_spans(text)
     if not spans:
         return spans

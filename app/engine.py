@@ -13,12 +13,13 @@ import os
 from app.detectors import Span, detect_structured, resolve_overlaps
 from app.lexicon import ADDRESS_CONTEXT
 from app.masking import apply_masks
+from app.pii_types import PII
 
 log = logging.getLogger(__name__)
 
 # Типы, требующие подтверждения контекстом (bare-спаны).
-_BARE_DEPT = "dept_code"
-_BARE_ADDR = "address"
+_BARE_DEPT = PII.DEPT_CODE.value
+_BARE_ADDR = PII.ADDRESS.value
 
 
 def _select_ner() -> object:
@@ -44,7 +45,7 @@ def _bare_ok(span: Span, has_passport: bool, has_addr: bool, has_ctx: bool) -> b
 def _confirm_bare(spans: list[Span], text: str) -> list[Span]:
     """Подтверждает bare-спаны: dept_code — есть паспорт; address — другой адрес или контекст."""
     types = {s.type for s in spans}
-    has_passport = "passport" in types
+    has_passport = PII.PASSPORT.value in types
     has_addr = any(s.type == _BARE_ADDR and not s.meta.get("bare") for s in spans)
     has_ctx = ADDRESS_CONTEXT.search(text) is not None
     result: list[Span] = []
@@ -57,9 +58,9 @@ def _confirm_bare(spans: list[Span], text: str) -> list[Span]:
 
 def _drop_contextual(spans: list[Span]) -> list[Span]:
     """При contextual=True без карты выбрасывает card_pin и cvv."""
-    if any(s.type == "card" for s in spans):
+    if any(s.type == PII.CARD.value for s in spans):
         return spans
-    return [s for s in spans if s.type not in ("card_pin", "cvv")]
+    return [s for s in spans if s.type not in (PII.CARD_PIN.value, PII.CVV.value)]
 
 
 def analyze(

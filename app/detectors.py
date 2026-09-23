@@ -10,6 +10,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 
+from app.pii_types import PII
+
 # --- короткие именованные фрагменты регэкспов ---------------------------------
 
 _DATE_ISO = r"\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}"
@@ -145,99 +147,99 @@ class Rule:
 # --- таблица правил раздела 3 -------------------------------------------------
 
 RULES: tuple[Rule, ...] = (
-    Rule(re.compile(r"\b[\w.+\-]+@[A-Za-z0-9\-]+\.[A-Za-z0-9.\-]+\b"), "email", 90),
-    Rule(re.compile(r"(?<!\d)" + _PHONE + r"(?!\d)"), "phone", 80),
+    Rule(re.compile(r"\b[\w.+\-]+@[A-Za-z0-9\-]+\.[A-Za-z0-9.\-]+\b"), PII.EMAIL.value, 90),
+    Rule(re.compile(r"(?<!\d)" + _PHONE + r"(?!\d)"), PII.PHONE.value, 80),
     Rule(
         re.compile(kw(r"тел\.?|телефон\w*|моб\.?|phone") + r"\s*[:]?\s*(\d[\d\s\-()]{5,10})"),
-        "phone", 79, groups=(1,), validator=phone_ok,
+        PII.PHONE.value, 79, groups=(1,), validator=phone_ok,
     ),
-    Rule(re.compile(_CARD), "card", 95, validator=card_ok),
+    Rule(re.compile(_CARD), PII.CARD.value, 95, validator=card_ok),
     Rule(
         re.compile(kw(r"карт\w*|card|pan") + r"\s*[:]?\s*(" + _CARD + r")"),
-        "card", 93, groups=(1,),
+        PII.CARD.value, 93, groups=(1,),
     ),
     Rule(
         re.compile(r"(?i)\b(?:cvv2?|cvc2?)\b\s*[:]?\s*(\d{3})"),
-        "cvv", 95, groups=(1,),
+        PII.CVV.value, 95, groups=(1,),
     ),
     Rule(
         re.compile(kw(r"пин|pin") + r"(?:[\s-]?код)?(?:\s+карты)?\s*[:]?\s*(\d{4})"),
-        "card_pin", 95, groups=(1,),
+        PII.CARD_PIN.value, 95, groups=(1,),
     ),
     Rule(
         re.compile(kw(r"держатель\s+карты|cardholder") + r"\s*[:]?\s*([А-ЯЁA-Z][\w\-]*(?:\s+[А-ЯЁA-Z][\w\-]*){0,2})"),
-        "card_holder", 84, groups=(1,),
+        PII.CARD_HOLDER.value, 84, groups=(1,),
     ),
     Rule(
         re.compile(kw(r"паспорт\w*") + r"\s*[:]?\s*(?:серия\s*)?(\d{2}\s?\d{2})\s*(?:номер|№)?\s*(\d{6})"),
-        "passport", 88, groups=(1, 2),
+        PII.PASSPORT.value, 88, groups=(1, 2),
     ),
     Rule(
         re.compile(r"(?<!\d)(\d{2}\s?\d{2})(?:\s+|\s*(?:№|номер)\s*)(\d{6})(?!\d)"),
-        "passport", 70, groups=(1, 2),
+        PII.PASSPORT.value, 70, groups=(1, 2),
     ),
     Rule(
         re.compile(kw(r"код\s+подразделения|к/п|к\.п\.") + r"\s*[:]?\s*(\d{3}-?\d{3})"),
-        "dept_code", 76, groups=(1,),
+        PII.DEPT_CODE.value, 76, groups=(1,),
     ),
-    Rule(re.compile(r"(?<!\d)(\d{3}-\d{3})(?!\d)"), "dept_code", 75, groups=(1,), bare=True),
+    Rule(re.compile(r"(?<!\d)(\d{3}-\d{3})(?!\d)"), PII.DEPT_CODE.value, 75, groups=(1,), bare=True),
     Rule(
         re.compile(kw(r"дата\s+выдачи|выдан") + r".{0,80}?(" + _DATE + r")"),
-        "passport_date", 72, groups=(1,),
+        PII.PASSPORT_DATE.value, 72, groups=(1,),
     ),
     Rule(
         re.compile(kw(r"выдан") + r"\s*" + _DATE + r"\s*(" + _CAP_VALUE_DOT + r")"),
-        "passport_issuer", 70, groups=(1,),
+        PII.PASSPORT_ISSUER.value, 70, groups=(1,),
     ),
     Rule(
         re.compile(kw(r"выдан") + r"\s*(" + _CAP_VALUE_DOT + r"?)\s+" + _DATE),
-        "passport_issuer", 70, groups=(1,),
+        PII.PASSPORT_ISSUER.value, 70, groups=(1,),
     ),
     Rule(
         re.compile(kw(r"водительское\s+удостоверение|в/у|права") + r"\s*[:№]?\s*(" + _DL + r")"),
-        "driver_license", 85, groups=(1,),
+        PII.DRIVER_LICENSE.value, 85, groups=(1,),
     ),
     Rule(
         re.compile(kw(r"ИНН") + r".{0,12}?(\d{12}|\d{10})(?!\d)"),
-        "inn", 92, groups=(1,), validator=inn_ok,
+        PII.INN.value, 92, groups=(1,), validator=inn_ok,
     ),
-    Rule(re.compile(r"(?<!\d)(\d{12}|\d{10})(?!\d)"), "inn", 60, groups=(1,), validator=inn_ok),
+    Rule(re.compile(r"(?<!\d)(\d{12}|\d{10})(?!\d)"), PII.INN.value, 60, groups=(1,), validator=inn_ok),
     Rule(
         re.compile(kw(r"СНИЛС") + r"\s*[:]?\s*(" + _SNILS + r")"),
-        "snils", 94, groups=(1,), validator=snils_ok,
+        PII.SNILS.value, 94, groups=(1,), validator=snils_ok,
     ),
-    Rule(re.compile(r"(?<!\d)(" + _SNILS + r")(?!\d)"), "snils", 82, groups=(1,), validator=snils_ok),
+    Rule(re.compile(r"(?<!\d)(" + _SNILS + r")(?!\d)"), PII.SNILS.value, 82, groups=(1,), validator=snils_ok),
     Rule(
         re.compile(kw(r"дата\s+рождения|д\.р\.|родился") + r"\s*[:]?\s*(" + _DATE + r")"),
-        "birth_date", 74, groups=(1,),
+        PII.BIRTH_DATE.value, 74, groups=(1,),
     ),
-    Rule(re.compile(r"(" + _DATE + r")\s*г\.р\."), "birth_date", 74, groups=(1,)),
+    Rule(re.compile(r"(" + _DATE + r")\s*г\.р\."), PII.BIRTH_DATE.value, 74, groups=(1,)),
     Rule(
         re.compile(r"(\d{1,2}\s+" + _MONTHS + r"\s+\d{4})"),
-        "birth_date", 55, groups=(1,), validator=_birth_year_ok,
+        PII.BIRTH_DATE.value, 55, groups=(1,), validator=_birth_year_ok,
     ),
     Rule(
         re.compile(r"(?<!\d)(" + _DATE + r")(?!\d)"),
-        "birth_date", 50, groups=(1,), validator=_birth_year_ok,
+        PII.BIRTH_DATE.value, 50, groups=(1,), validator=_birth_year_ok,
     ),
     Rule(
         re.compile(kw(r"место\s+рождения|м\.р\.") + r"\s*[:]?\s*(" + _VALUE_DOT + r")"),
-        "birth_place", 71, groups=(1,),
+        PII.BIRTH_PLACE.value, 71, groups=(1,),
     ),
     Rule(
         re.compile(kw(r"гражданство") + r"\s*[:]?\s*(" + _CAP_VALUE + r")"),
-        "citizenship", 73, groups=(1,),
+        PII.CITIZENSHIP.value, 73, groups=(1,),
     ),
     Rule(
         re.compile(kw(r"гражданин\w*") + r"\s*(" + _CAP_VALUE + r")"),
-        "citizenship", 73, groups=(1,),
+        PII.CITIZENSHIP.value, 73, groups=(1,),
     ),
-    Rule(re.compile(kw(r"индекс") + r"\s*[:]?\s*(\d{6})"), "address", 65, groups=(1,)),
-    Rule(re.compile(r"(?<!\d)(\d{6})(?=,\s*(?:г\.|гор\.|город|[А-ЯЁ][а-яё]+))"), "address", 63, groups=(1,)),
-    Rule(re.compile(r"(Россия|РФ)\s*,\s*индекс"), "address", 63, groups=(1,)),
+    Rule(re.compile(kw(r"индекс") + r"\s*[:]?\s*(\d{6})"), PII.ADDRESS.value, 65, groups=(1,)),
+    Rule(re.compile(r"(?<!\d)(\d{6})(?=,\s*(?:г\.|гор\.|город|[А-ЯЁ][а-яё]+))"), PII.ADDRESS.value, 63, groups=(1,)),
+    Rule(re.compile(r"(Россия|РФ)\s*,\s*индекс"), PII.ADDRESS.value, 63, groups=(1,)),
     Rule(
         re.compile(kw(_FIO_MARKERS) + r"\s*[:]?\s*([А-ЯЁ][А-ЯЁа-яё]+(?:\s+[А-ЯЁ][А-ЯЁа-яё]+){1,2})"),
-        "fio", 79, groups=(1,),
+        PII.FIO.value, 79, groups=(1,),
     ),
 )
 
