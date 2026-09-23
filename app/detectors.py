@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.pii_types import PII
 
@@ -27,6 +27,9 @@ _DL = r"\d{2}\s?\d{2}\s?\d{6}"
 _CARD = r"\d(?:[ \-]?\d){12,18}"
 _MONTHS = r"(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)"
 _FIO_MARKERS = r"ФИО|клиент\w*|пациент\w*|заявитель\w*|плательщик\w*|получатель\w*|на\s+имя"
+
+# Разделитель «ключ: значение»: пробелы и необязательное двоеточие.
+_KV_OPEN = r"\s*[:]?\s*"
 
 # Значение с заглавной до запятой/точки/переноса; точка внутри не допускается.
 _CAP_VALUE = r"[А-ЯЁA-Z][^,.;\n]*"
@@ -98,7 +101,7 @@ def phone_ok(value: str) -> bool:
 
 def plausible_birth_year(year: int) -> bool:
     """Год рождения правдоподобен: [1900, текущий−14]."""
-    return 1900 <= year <= datetime.now().year - 14
+    return 1900 <= year <= datetime.now(tz=timezone.utc).year - 14
 
 
 def _year_from_date(value: str) -> int | None:
@@ -155,11 +158,11 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(re.compile(_CARD), PII.CARD.value, 95, validator=card_ok),
     Rule(
-        re.compile(kw(r"карт\w*|card|pan") + r"\s*[:]?\s*(" + _CARD + r")"),
+        re.compile(kw(r"карт\w*|card|pan") + r"" + _KV_OPEN + r"(" + _CARD + r")"),
         PII.CARD.value, 93, groups=(1,),
     ),
     Rule(
-        re.compile(r"(?i)\b(?:cvv2?|cvc2?)\b\s*[:]?\s*(\d{3})"),
+        re.compile(r"(?i)\b(?:cvv2?|cvc2?)\b\s*:?\s*(\d{3})"),
         PII.CVV.value, 95, groups=(1,),
     ),
     Rule(
@@ -205,12 +208,12 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(re.compile(r"(?<!\d)(\d{12}|\d{10})(?!\d)"), PII.INN.value, 60, groups=(1,), validator=inn_ok),
     Rule(
-        re.compile(kw(r"СНИЛС") + r"\s*[:]?\s*(" + _SNILS + r")"),
+        re.compile(kw(r"СНИЛС") + r"" + _KV_OPEN + r"(" + _SNILS + r")"),
         PII.SNILS.value, 94, groups=(1,), validator=snils_ok,
     ),
     Rule(re.compile(r"(?<!\d)(" + _SNILS + r")(?!\d)"), PII.SNILS.value, 82, groups=(1,), validator=snils_ok),
     Rule(
-        re.compile(kw(r"дата\s+рождения|д\.р\.|родился") + r"\s*[:]?\s*(" + _DATE + r")"),
+        re.compile(kw(r"дата\s+рождения|д\.р\.|родился") + r"" + _KV_OPEN + r"(" + _DATE + r")"),
         PII.BIRTH_DATE.value, 74, groups=(1,),
     ),
     Rule(re.compile(r"(" + _DATE + r")\s*г\.р\."), PII.BIRTH_DATE.value, 74, groups=(1,)),
@@ -223,11 +226,11 @@ RULES: tuple[Rule, ...] = (
         PII.BIRTH_DATE.value, 50, groups=(1,), validator=_birth_year_ok,
     ),
     Rule(
-        re.compile(kw(r"место\s+рождения|м\.р\.") + r"\s*[:]?\s*(" + _VALUE_DOT + r")"),
+        re.compile(kw(r"место\s+рождения|м\.р\.") + r"" + _KV_OPEN + r"(" + _VALUE_DOT + r")"),
         PII.BIRTH_PLACE.value, 71, groups=(1,),
     ),
     Rule(
-        re.compile(kw(r"гражданство") + r"\s*[:]?\s*(" + _CAP_VALUE + r")"),
+        re.compile(kw(r"гражданство") + r"" + _KV_OPEN + r"(" + _CAP_VALUE + r")"),
         PII.CITIZENSHIP.value, 73, groups=(1,),
     ),
     Rule(

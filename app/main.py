@@ -58,7 +58,7 @@ def _load_record(payload_id: str):
     """Достаёт запись из стора; при ошибке стора логирует и возвращает None."""
     try:
         return _store.get(payload_id)
-    except (ConnectionError, TimeoutError, OSError):
+    except OSError:
         log.warning("Ошибка чтения стора для payload_id=%s", payload_id)
         return None
 
@@ -73,7 +73,7 @@ def _mask_and_store(payload_id: str, payload: str, policy: SystemPolicy) -> str:
     log.info("Маскирование: типы=%s", {t: types.count(t) for t in set(types)})
     try:
         _store.put(payload_id, payload, masked)
-    except (ConnectionError, TimeoutError, OSError):
+    except OSError:
         log.warning("Ошибка записи в стор для payload_id=%s", payload_id)
     return masked
 

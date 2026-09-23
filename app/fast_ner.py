@@ -21,10 +21,16 @@ _INITIALS = r"[А-ЯЁ]\.\s*[А-ЯЁ]\."
 _PATRONYMIC = r"[А-ЯЁ][А-ЯЁа-яё]*?(?i:(?:ович|евич|ьич|инич|овна|евна|ична)[а-яё]*)"
 _SURNAME_SUFFIX = r"(?:ов|ев|ин|ын|ск|цк|их|ых|ко|ук|юк|ян|ич|дзе)[а-яё]{0,3}$"
 
+
+def _join(*parts: str) -> str:
+    """Склейка групп через пробелы в необъединяемую группу."""
+    return r"(?:" + r")\s+(?:".join(parts) + r")"
+
+
 # Полное имя: Фамилия Имя Отчество или Имя Отчество Фамилия.
 _FULL_NAME = re.compile(
-    r"(?<![А-ЯЁа-яё])(?:(?:" + _WORD + r")\s+(?:" + _WORD + r")\s+(?:" + _PATRONYMIC + r")"
-    r"|(?:" + _WORD + r")\s+(?:" + _PATRONYMIC + r")\s+(?:" + _WORD + r"))(?![А-ЯЁа-яё])"
+    r"(?<![А-ЯЁа-яё])(?:" + _join(_WORD, _WORD, _PATRONYMIC)
+    + r"|" + _join(_WORD, _PATRONYMIC, _WORD) + r")(?![А-ЯЁа-яё])"
 )
 # Имя Отчество.
 _IMYA_OTCH = re.compile(
@@ -32,8 +38,8 @@ _IMYA_OTCH = re.compile(
 )
 # Фамилия И.О. / И.О. Фамилия.
 _FAM_INITIALS = re.compile(
-    r"(?<![А-ЯЁа-яё])(?:(?:" + _WORD + r")\s+(?:" + _INITIALS + r")"
-    r"|(?:" + _INITIALS + r")\s+(?:" + _WORD + r"))(?![А-ЯЁа-яё])"
+    r"(?<![А-ЯЁа-яё])(?:" + _join(_WORD, _INITIALS)
+    + r"|" + _join(_INITIALS, _WORD) + r")(?![А-ЯЁа-яё])"
 )
 # Перекрывающиеся пары слов через lookahead.
 _PAIR = re.compile(r"\b(?=(" + _WORD + r")\s+(" + _WORD + r")\b)")
@@ -118,7 +124,7 @@ def _pair_spans(text: str, m: re.Match, rule: _Rule) -> list[Span]:
     return [Span(m.start(1), m.end(2), PII.FIO.value, rule.priority)]
 
 
-def _group_spans(text: str, m: re.Match, rule: _Rule) -> list[Span]:
+def _group_spans(m: re.Match, rule: _Rule) -> list[Span]:
     """Спаны правила-групп: по каждой группе с валидатором."""
     spans: list[Span] = []
     for g in rule.groups:
@@ -139,7 +145,7 @@ def detect_names(text: str) -> list[Span]:
             if rule.pair:
                 spans += _pair_spans(text, m, rule)
             else:
-                spans += _group_spans(text, m, rule)
+                spans += _group_spans(m, rule)
     return _clean_names(text, spans)
 
 
@@ -171,7 +177,7 @@ _ADDR_HOUSE = re.compile(r"(?:д\.|дом)\s*[:]?\s*(" + _HOUSE + r")")
 # Дом после названия улицы/типа.
 _ADDR_HOUSE_AFTER = re.compile(r"(?:" + _STREET_TYPES + r")(?:\s*" + _CITY + r")?\s*,?\s*(" + _HOUSE + r")(?!\d)")
 # Квартира/офис.
-_ADDR_FLAT = re.compile(r"(?:кв\.|квартира|офис|оф\.)\s*[:]?\s*(\d+)")
+_ADDR_FLAT = re.compile(r"(?:кв\.|квартира|офис|оф\.)\s*:?\s*(\d+)")
 # Регион: «Московская область», «Республика Татарстан».
 _ADDR_REGION = re.compile(r"(" + _CITY + r")\s+(?:област\w*|обл\.|кра[йяе]|округ\w*|район\w*|р-н)|(?i:республик[аи])\s+(" + _CITY + r")")
 
