@@ -146,7 +146,7 @@ class Rule:
 
 RULES: tuple[Rule, ...] = (
     Rule(re.compile(r"\b[\w.+\-]+@[A-Za-z0-9\-]+\.[A-Za-z0-9.\-]+\b"), "email", 90),
-    Rule(re.compile(_PHONE), "phone", 80),
+    Rule(re.compile(r"(?<!\d)" + _PHONE + r"(?!\d)"), "phone", 80),
     Rule(
         re.compile(kw(r"тел\.?|телефон\w*|моб\.?|phone") + r"\s*[:]?\s*(\d[\d\s\-()]{5,10})"),
         "phone", 79, groups=(1,), validator=phone_ok,
@@ -161,7 +161,7 @@ RULES: tuple[Rule, ...] = (
         "cvv", 95, groups=(1,),
     ),
     Rule(
-        re.compile(kw(r"пин|pin") + r"(?:-код)?(?:\s+карты)?\s*[:]?\s*(\d{4})"),
+        re.compile(kw(r"пин|pin") + r"(?:[\s-]?код)?(?:\s+карты)?\s*[:]?\s*(\d{4})"),
         "card_pin", 95, groups=(1,),
     ),
     Rule(
@@ -233,7 +233,7 @@ RULES: tuple[Rule, ...] = (
         "citizenship", 73, groups=(1,),
     ),
     Rule(re.compile(kw(r"индекс") + r"\s*[:]?\s*(\d{6})"), "address", 65, groups=(1,)),
-    Rule(re.compile(r"(\d{6})\s*,\s*(?:г\.|город)"), "address", 63, groups=(1,)),
+    Rule(re.compile(r"(?<!\d)(\d{6})(?=,\s*(?:г\.|гор\.|город|[А-ЯЁ][а-яё]+))"), "address", 63, groups=(1,)),
     Rule(re.compile(r"(Россия|РФ)\s*,\s*индекс"), "address", 63, groups=(1,)),
     Rule(
         re.compile(kw(_FIO_MARKERS) + r"\s*[:]?\s*([А-ЯЁ][А-ЯЁа-яё]+(?:\s+[А-ЯЁ][А-ЯЁа-яё]+){1,2})"),
